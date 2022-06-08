@@ -1,41 +1,35 @@
-import subprocess
 from http.server import HTTPServer
-from request_handler import RequestHandler
-import request_handler
-import socket
+from app.container.container import Container
+from app.connector.connectors import LeagueConnector
+from app.container import bindings
+from threading import Thread
+from app.monitor.monitor import Monitor
+from time import sleep
+
 
 if __name__ == '__main__':
-    with subprocess.Popen('ps -x | grep LeagueClientUx', shell=True, stdout=subprocess.PIPE).stdout as processes:
-        client_process = processes.readline().decode('utf-8')
+    print('Initializing app')
 
-    if not client_process:
-        exit(1)
+    container = Container()
+    bindings.apply(container)
 
-    raw_flags = client_process.split(' --')[1::]
-    flags = {}
-    for raw_flag in raw_flags:
-        flag = raw_flag.split('=')
+    league_connector: LeagueConnector = container.get('app.connector.connectors.LeagueConnector')
+    http_server: HTTPServer = container.get('http-server')
+    monitor: Monitor = container.get('app.monitor.monitor.Monitor')
 
-        if len(flag) == 2:
-            flags[flag[0]] = flag[1]
-        else:
-            flags[flag[0]] = None
+    threads = {
+        'league_connector': Thread(target=league_connector.run),
+        'http': Thread(target=http_server.serve_forever),
+        'monitor': Thread(target=monitor.run),
+    }
 
-    request_handler.PORT = int(flags['app-port'])
-    request_handler.PASSWORD = flags['remoting-auth-token']
+    try:
+        for thread in threads.values():
+            thread.start()
 
-    print('Running the server on 0.0.0.0:2137')
-    server = HTTPServer(('0.0.0.0', 2137), RequestHandler)
-
-    hostname = socket.gethostname()
-    possible_ips = socket.gethostbyname_ex(hostname)[2]
-    local_ip = possible_ips.pop()
-    while local_ip == '127.0.0.1':
-        local_ip = possible_ips.pop()
-
-    print('Awaiting connections')
-    print('To connect via the mobile app, provide it with the address ' + local_ip + ':2137')
-    server.serve_forever()
-
-    # summoner_id = requester.request('GET', '/lol-summoner/v1/current-summoner').json()['summonerId']
-    # team_members = requester.request('GET', '/lol-champ-select/v1/session').json()['myTeam']
+        while True:
+            sleep(100)
+    except BaseException:
+        http_server.shutdown()
+        league_connector.shutdown()
+        monitor.shutdown()

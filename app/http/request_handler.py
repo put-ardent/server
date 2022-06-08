@@ -3,12 +3,12 @@ from json import dumps, loads
 from typing import Optional
 import requests
 from requests.auth import HTTPBasicAuth
+from app.struct.league_connection import LeagueConnection
 
-PORT = None
-PASSWORD = None
 
 class RequestHandler(BaseHTTPRequestHandler):
     SUPPORTED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+    CONNECTION: Optional[LeagueConnection] = None
 
     def __init__(self, *args, **kwargs):
         for method in self.SUPPORTED_METHODS:
@@ -17,8 +17,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do(self) -> None:
-        if not PORT or not PASSWORD:
-            raise RuntimeError('Server port and/or password is not set.')
+        if not self.CONNECTION.open:
+            self._response(502, {'error': 'LCU connection is not yet open.'})
+            return
 
         response = self._pass_request()
 
@@ -28,9 +29,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         data = self._get_body()
         response = requests.request(
             self.command,
-            f'https://127.0.0.1:{PORT}{self.path}',
+            f'https://127.0.0.1:{self.CONNECTION.port}{self.path}',
             json=data,
-            auth=HTTPBasicAuth('riot', PASSWORD),
+            auth=HTTPBasicAuth('riot', self.CONNECTION.password),
             verify='./riotgames.pem'
         )
 
