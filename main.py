@@ -8,8 +8,6 @@ from time import sleep
 
 
 if __name__ == '__main__':
-    print('Initializing app')
-
     container = Container()
     bindings.apply(container)
 

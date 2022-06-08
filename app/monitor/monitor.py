@@ -7,6 +7,7 @@ from app.struct.league_connection import LeagueConnection
 
 class Monitor:
     SPINNER_SEQUENCE = ('⠏', '⠛', '⠹', '⠼', '⠶', '⠧')
+
     def __init__(self, league_connection: LeagueConnection):
         self._league_connection = league_connection
         self._shutdown = False
@@ -15,23 +16,29 @@ class Monitor:
     def run(self):
         sys.stdout.write("\033[?25l")
         sys.stdout.flush()
-        print('\n')
+        print()
 
         while not self._shutdown:
             spinner_char = self.SPINNER_SEQUENCE[self._sequence_index]
 
-            if self._league_connection.open:
-                print(f"\033[F{chalk.green('v')} League Client is open.         ", end='\n')
-                print(f"{chalk.green('v')} League Client is open.         ", end='\r')
-            else:
-                print(f"\033[F{chalk.blue(spinner_char)} Waiting for league client.      ", end='\n')
-                print(f"{chalk.blue(spinner_char)} Waiting for league client.         ", end='\r')
+            status_ok = chalk.green('✔')
+            status_pending = chalk.blue(spinner_char)
+
+            league_line = (status_ok + ' ' + chalk.white('League Client is open.')) if self._league_connection.open \
+                else (status_pending + ' ' + chalk.white('Waiting for league client.'))
+            league_line = league_line.ljust(50)
+
+            mobile_line = (status_pending + ' ' + chalk.white('Waiting for mobile app.'))
+
+            print(f"\033[F{ league_line }", end='\n')
+            print(f"{ mobile_line }", end='\r')
 
             self._iterate_sequence_index()
             sleep(.15)
 
         sys.stdout.write("\033[?25h")
         sys.stdout.flush()
+        print()
 
     def shutdown(self) -> None:
         self._shutdown = True
