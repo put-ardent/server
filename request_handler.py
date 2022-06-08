@@ -26,26 +26,25 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def _pass_request(self) -> requests.Response:
         data = self._get_body()
-        request = requests.request(
+        response = requests.request(
             self.command,
             f'https://127.0.0.1:{PORT}{self.path}',
-            data=data,
+            json=data,
             auth=HTTPBasicAuth('riot', PASSWORD),
             verify='./riotgames.pem'
         )
 
-        if request.status_code > 299:
-            print(request.json())
-            exit(1)
+        if response.status_code > 299:
+            print(response.json())
 
-        return request
+        return response
 
     def _get_body(self) -> Optional[dict]:
         if 'Content-Length' not in self.headers:
             return None
 
         content_length = int(self.headers['Content-Length'])
-
+        
         return loads(self.rfile.read(content_length).decode())
 
     def _response(self, status_code: int, body: dict):

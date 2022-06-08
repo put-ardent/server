@@ -2,6 +2,7 @@ import subprocess
 from http.server import HTTPServer
 from request_handler import RequestHandler
 import request_handler
+import socket
 
 if __name__ == '__main__':
     with subprocess.Popen('ps -x | grep LeagueClientUx', shell=True, stdout=subprocess.PIPE).stdout as processes:
@@ -26,7 +27,14 @@ if __name__ == '__main__':
     print('Running the server on 0.0.0.0:2137')
     server = HTTPServer(('0.0.0.0', 2137), RequestHandler)
 
+    hostname = socket.gethostname()
+    possible_ips = socket.gethostbyname_ex(hostname)[2]
+    local_ip = possible_ips.pop()
+    while local_ip == '127.0.0.1':
+        local_ip = possible_ips.pop()
+
     print('Awaiting connections')
+    print('To connect via the mobile app, provide it with the address ' + local_ip + ':2137')
     server.serve_forever()
 
     # summoner_id = requester.request('GET', '/lol-summoner/v1/current-summoner').json()['summonerId']
