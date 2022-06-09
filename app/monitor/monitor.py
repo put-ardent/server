@@ -1,15 +1,15 @@
 import chalk
 from time import sleep
 import sys
-
-from app.struct.league_connection import LeagueConnection
+from app.struct.connection import LeagueConnection, MobileConnection
 
 
 class Monitor:
     SPINNER_SEQUENCE = ('⠏', '⠛', '⠹', '⠼', '⠶', '⠧')
 
-    def __init__(self, league_connection: LeagueConnection):
+    def __init__(self, league_connection: LeagueConnection, mobile_connection: MobileConnection):
         self._league_connection = league_connection
+        self._mobile_connection = mobile_connection
         self._shutdown = False
         self._sequence_index = 0
 
@@ -28,7 +28,8 @@ class Monitor:
                 else (status_pending + ' ' + chalk.white('Waiting for league client.'))
             league_line = league_line.ljust(50)
 
-            mobile_line = (status_pending + ' ' + chalk.white('Waiting for mobile app.'))
+            mobile_line = (status_ok + ' ' + chalk.white('Mobile app is open.')) if self._mobile_connection.open \
+                else (status_pending + ' ' + chalk.white('Waiting for mobile app.'))
 
             print(f"\033[F{ league_line }", end='\n')
             print(f"{ mobile_line }", end='\r')

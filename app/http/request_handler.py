@@ -3,7 +3,7 @@ from json import dumps, loads
 from typing import Optional
 import requests
 from requests.auth import HTTPBasicAuth
-from app.struct.league_connection import LeagueConnection
+from app.struct.connection import LeagueConnection
 
 
 class RequestHandler(BaseHTTPRequestHandler):

@@ -1,6 +1,8 @@
 import subprocess
 from time import sleep
-from app.struct.league_connection import LeagueConnection
+from app.struct.connection import LeagueConnection, MobileConnection
+import socket
+from contextlib import closing
 
 
 class Connector:
@@ -62,3 +64,46 @@ class LeagueConnector(Connector):
             self._connection.password = None
 
             self._connected = False
+
+
+class MobileConnector(Connector):
+    def __init__(self, connection: MobileConnection):
+        super().__init__()
+        self._connection = connection
+        self._shutdown = False
+
+    def run(self) -> None:
+        while not self._shutdown:
+            if self._connected:
+                self._keep_alive(self._connection.host, self._connection.port)
+            else:
+                self._broadcast_self()
+
+            sleep(1)
+
+    def shutdown(self) -> None:
+        self._shutdown = True
+
+    def _broadcast_self(self) -> None:
+        me = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if ip != '127.0.0.1'][0]
+        network = '.'.join(me.split('.')[:-1])
+        addresses = [me]
+        with subprocess.Popen(f'arp -a | grep {network}', shell=True, stdout=subprocess.PIPE).stdout as arp:
+            for line in arp.readlines():
+                line = line.decode('utf-8')
+                address = line.split('(')[1].split(')')[0]
+                if address.split('.')[-1] == '255':
+                    continue
+
+                addresses.append(address)
+
+        for address in set(addresses):
+            self._start_socket(address, 6969)
+
+    def _start_socket(self, host, port) -> None:
+        me = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if ip != '127.0.0.1'][0]
+        self._keep_alive(host, port, f'{me}'.encode('utf-8'))
+
+    def _keep_alive(self, host, port, message=b'1') -> None:
+        with closing(socket.socket(socket.AF_INET, socket.SOCK_DGRAM)) as sock:
+            sock.sendto(message, (host, port))
