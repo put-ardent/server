@@ -90,7 +90,7 @@ class InternalRequestHandler(AbstractRequestHandler):
 
             return InternalResponse(None, 204)
 
-        if self.command == 'GET' and self.path == '/active-queues':
+        if self.command == 'GET' and self.path == '/queues':
             queues_response = self._league_request('get', '/lol-game-queues/v1/queues')
             queues = [queue for queue in queues_response.json() if queue['queueAvailability'] == 'Available']
 
