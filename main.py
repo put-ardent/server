@@ -14,12 +14,14 @@ if __name__ == '__main__':
     league_connector: LeagueConnector = container.get('app.connector.connectors.LeagueConnector')
     mobile_connector: MobileConnector = container.get('app.connector.connectors.MobileConnector')
     http_server: HTTPServer = container.get('http-server')
+    internal_http_server: HTTPServer = container.get('internal-http-server')
     monitor: Monitor = container.get('app.monitor.monitor.Monitor')
 
     threads = {
         'league_connector': Thread(target=league_connector.run),
         'mobile_connector': Thread(target=mobile_connector.run),
         'http': Thread(target=http_server.serve_forever),
+        'internal-http': Thread(target=internal_http_server.serve_forever),
         'monitor': Thread(target=monitor.run),
     }
 
@@ -33,4 +35,5 @@ if __name__ == '__main__':
         league_connector.shutdown()
         mobile_connector.shutdown()
         http_server.shutdown()
+        internal_http_server.shutdown()
         monitor.shutdown()

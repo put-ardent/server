@@ -30,6 +30,7 @@ class Monitor:
 
             mobile_line = (status_ok + ' ' + chalk.white('Mobile app is open.')) if self._mobile_connection.open \
                 else (status_pending + ' ' + chalk.white('Waiting for mobile app.'))
+            mobile_line = mobile_line.ljust(50)
 
             print(f"\033[F{ league_line }", end='\n')
             print(f"{ mobile_line }", end='\r')

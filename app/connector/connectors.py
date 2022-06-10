@@ -3,6 +3,7 @@ from time import sleep
 from app.struct.connection import LeagueConnection, MobileConnection
 import socket
 from contextlib import closing
+from json import dumps
 
 
 class Connector:
@@ -74,8 +75,8 @@ class MobileConnector(Connector):
 
     def run(self) -> None:
         while not self._shutdown:
-            if self._connected:
-                self._keep_alive(self._connection.host, self._connection.port)
+            if self._connection.open:
+                self._send(self._connection.host, self._connection.port)
             else:
                 self._broadcast_self()
 
@@ -102,8 +103,9 @@ class MobileConnector(Connector):
 
     def _start_socket(self, host, port) -> None:
         me = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if ip != '127.0.0.1'][0]
-        self._keep_alive(host, port, f'{me}'.encode('utf-8'))
+        data = {'type': 'connection', 'address': me}
+        self._send(host, port, dumps(data).encode())
 
-    def _keep_alive(self, host, port, message=b'1') -> None:
+    def _send(self, host, port, message=b'{"type":"keep-alive"}') -> None:
         with closing(socket.socket(socket.AF_INET, socket.SOCK_DGRAM)) as sock:
             sock.sendto(message, (host, port))
