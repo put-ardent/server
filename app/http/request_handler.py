@@ -92,7 +92,21 @@ class InternalRequestHandler(AbstractRequestHandler):
 
         if self.command == 'GET' and self.path == '/queues':
             queues_response = self._league_request('get', '/lol-game-queues/v1/queues')
-            queues = [queue for queue in queues_response.json() if queue['queueAvailability'] == 'Available']
+            raw_queues = [
+                queue for queue in queues_response.json()
+                if queue['queueAvailability'] == 'Available'
+                and queue['gameMode'] != 'TFT'
+                and 1 in queue['allowablePremadeSizes']
+                and queue['category'] == 'PvP'
+            ]
+
+            queues = {'ranked': [], 'unranked': [], 'other': []}
+            for queue in raw_queues:
+                if queue['gameMode'] == 'CLASSIC':
+                    mode = 'ranked' if queue['isRanked'] else 'unranked'
+                    queues[mode].append(queue)
+                elif queue['gameMode'].split('_')[0] != 'TUTORIAL':
+                    queues['other'].append(queue)
 
             return InternalResponse({'data': queues}, 200)
 
