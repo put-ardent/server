@@ -1,3 +1,4 @@
+import re
 from http.server import BaseHTTPRequestHandler
 from json import dumps, loads
 from typing import Optional
@@ -20,8 +21,9 @@ class AbstractRequestHandler(BaseHTTPRequestHandler):
             return None
 
         content_length = int(self.headers['Content-Length'])
+        content = self.rfile.read(content_length).decode()
 
-        return loads(self.rfile.read(content_length).decode())
+        return loads(content) if content else None
 
     def _respond(self, response: InternalResponse) -> None:
         self.send_response(response.status_code)
@@ -85,8 +87,8 @@ class InternalRequestHandler(AbstractRequestHandler):
 
         if self.command == 'POST' and self.path == '/connection':
             self.MOBILE_CONNECTION.open = True
-            self.MOBILE_CONNECTION.host = data['host']
-            self.MOBILE_CONNECTION.port = 6969
+            self.MOBILE_CONNECTION.host = self.headers.get('Host').split(':')[0]
+            self.MOBILE_CONNECTION.port = data['port']
 
             return InternalResponse(None, 204)
 
@@ -109,5 +111,8 @@ class InternalRequestHandler(AbstractRequestHandler):
                     queues['other'].append(queue)
 
             return InternalResponse({'data': queues}, 200)
+
+        if self.command == 'POST' and re.match('^\/queues/\d+/join$', self.path):
+            return InternalResponse({'data': 1}, 200)
 
         return InternalResponse({'error': 'Method and route combination not found.'}, 404)

@@ -28,7 +28,11 @@ class Monitor:
                 else (status_pending + ' ' + chalk.white('Waiting for league client.'))
             league_line = league_line.ljust(50)
 
-            mobile_line = (status_ok + ' ' + chalk.white('Mobile app is open.')) if self._mobile_connection.open \
+            mobile_line = (
+                status_ok
+                + ' '
+                + chalk.white(f'Mobile app is open at {self._mobile_connection.host}:{self._mobile_connection.port}.')
+            ) if self._mobile_connection.open \
                 else (status_pending + ' ' + chalk.white('Waiting for mobile app.'))
             mobile_line = mobile_line.ljust(50)
 
