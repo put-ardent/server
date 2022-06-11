@@ -16,6 +16,9 @@ class InternalResponse:
 class AbstractRequestHandler(BaseHTTPRequestHandler):
     SUPPORTED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
+    LEAGUE_CONNECTION: Optional[LeagueConnection] = None
+    MOBILE_CONNECTION: Optional[MobileConnection] = None
+
     def _get_body(self) -> Optional[dict]:
         if 'Content-Length' not in self.headers:
             return None
@@ -33,19 +36,18 @@ class AbstractRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args) -> None:
         return
 
-    def _league_request(self, method: str, path: str, data: Optional[dict] = None) -> requests.Response:
+    @staticmethod
+    def league_request(method: str, path: str, data: Optional[dict] = None) -> requests.Response:
         return requests.request(
             method,
-            f'https://127.0.0.1:{RequestHandler.CONNECTION.port}{path}',
+            f'https://127.0.0.1:{AbstractRequestHandler.LEAGUE_CONNECTION.port}{path}',
             json=data,
-            auth=HTTPBasicAuth('riot', RequestHandler.CONNECTION.password),
+            auth=HTTPBasicAuth('riot', AbstractRequestHandler.LEAGUE_CONNECTION.password),
             verify='./riotgames.pem'
         )
 
 
 class RequestHandler(AbstractRequestHandler):
-    CONNECTION: Optional[LeagueConnection] = None
-
     def __init__(self, *args, **kwargs):
         for method in self.SUPPORTED_METHODS:
             setattr(self, 'do_' + method, self.do)
@@ -53,7 +55,7 @@ class RequestHandler(AbstractRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do(self) -> None:
-        if not self.CONNECTION.open:
+        if not self.LEAGUE_CONNECTION.open:
             self._respond(InternalResponse({'error': 'LCU connection is not yet open.'}, 502))
             return
 
@@ -61,7 +63,7 @@ class RequestHandler(AbstractRequestHandler):
 
     def _pass_request(self) -> InternalResponse:
         data = self._get_body()
-        response = self._league_request(self.command, self.path, data)
+        response = self.league_request(self.command, self.path, data)
 
         if response.status_code > 299:
             print(response.json())
@@ -70,9 +72,6 @@ class RequestHandler(AbstractRequestHandler):
 
 
 class InternalRequestHandler(AbstractRequestHandler):
-    LEAGUE_CONNECTION: Optional[LeagueConnection] = None
-    MOBILE_CONNECTION: Optional[MobileConnection] = None
-
     def __init__(self, *args, **kwargs):
         for method in self.SUPPORTED_METHODS:
             setattr(self, 'do_' + method, self.do)
@@ -93,7 +92,7 @@ class InternalRequestHandler(AbstractRequestHandler):
             return InternalResponse(None, 204)
 
         if self.command == 'GET' and self.path == '/queues':
-            queues_response = self._league_request('get', '/lol-game-queues/v1/queues')
+            queues_response = self.league_request('get', '/lol-game-queues/v1/queues')
             raw_queues = [
                 queue for queue in queues_response.json()
                 if queue['queueAvailability'] == 'Available'
