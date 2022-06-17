@@ -1,4 +1,3 @@
-import re
 from http.server import BaseHTTPRequestHandler
 from json import dumps, loads
 from typing import Optional
@@ -68,7 +67,9 @@ class RequestHandler(AbstractRequestHandler):
         if response.status_code > 299:
             print(response.json())
 
-        return InternalResponse(response.json(), response.status_code)
+        body = {} if int(response.headers.get('Content-Length')) == 0 else response.json()
+
+        return InternalResponse(body, response.status_code)
 
 
 class InternalRequestHandler(AbstractRequestHandler):
@@ -96,9 +97,9 @@ class InternalRequestHandler(AbstractRequestHandler):
             raw_queues = [
                 queue for queue in queues_response.json()
                 if queue['queueAvailability'] == 'Available'
-                and queue['gameMode'] != 'TFT'
-                and 1 in queue['allowablePremadeSizes']
-                and queue['category'] == 'PvP'
+                   and queue['gameMode'] != 'TFT'
+                   and 1 in queue['allowablePremadeSizes']
+                   and queue['category'] == 'PvP'
             ]
 
             queues = {'ranked': [], 'unranked': [], 'other': []}
@@ -111,7 +112,18 @@ class InternalRequestHandler(AbstractRequestHandler):
 
             return InternalResponse({'data': queues}, 200)
 
-        if self.command == 'POST' and re.match('^\/queues/\d+/join$', self.path):
-            return InternalResponse({'data': 1}, 200)
+        # if self.command == 'POST' and re.match('^\/queues/\d+/join$', self.path):
+        if self.command == 'POST' and self.path == '/lobby':
+            self.league_request('post', '/lol-lobby/v2/lobby', {
+                'queueId': data['queueId']
+            })
+            self.league_request('post', '/lol-lobby/v2/lobby/matchmaking/search')
+
+            return InternalResponse(None, 204)
+
+        if self.command == 'DELETE' and self.path == '/lobby':
+            self.league_request('delete', '/lol-lobby/v2/lobby/matchmaking/search')
+
+            return InternalResponse(None, 204)
 
         return InternalResponse({'error': 'Method and route combination not found.'}, 404)

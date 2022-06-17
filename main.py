@@ -5,6 +5,7 @@ from app.container import bindings
 from threading import Thread
 from app.monitor.monitor import Monitor
 from time import sleep
+from app.wss.websockets_handler import WebsocketHandler
 
 
 if __name__ == '__main__':
@@ -16,6 +17,7 @@ if __name__ == '__main__':
     http_server: HTTPServer = container.get('http-server')
     internal_http_server: HTTPServer = container.get('internal-http-server')
     monitor: Monitor = container.get('app.monitor.monitor.Monitor')
+    websockets: WebsocketHandler = container.get('app.wss.websockets_handler.WebsocketHandler')
 
     threads = {
         'league_connector': Thread(target=league_connector.run),
@@ -23,6 +25,7 @@ if __name__ == '__main__':
         'http': Thread(target=http_server.serve_forever),
         'internal-http': Thread(target=internal_http_server.serve_forever),
         'monitor': Thread(target=monitor.run),
+        'wss': Thread(target=websockets.run)
     }
 
     try:

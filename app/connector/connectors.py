@@ -4,6 +4,7 @@ from app.struct.connection import LeagueConnection, MobileConnection
 import socket
 from contextlib import closing
 from json import dumps
+from typing import Optional
 
 
 class Connector:
@@ -68,15 +69,16 @@ class LeagueConnector(Connector):
 
 
 class MobileConnector(Connector):
-    def __init__(self, connection: MobileConnection):
+    MOBILE_CONNECTION: Optional[MobileConnection] = None
+
+    def __init__(self):
         super().__init__()
-        self._connection = connection
         self._shutdown = False
 
     def run(self) -> None:
         while not self._shutdown:
-            if self._connection.open:
-                self._send(self._connection.host, self._connection.port)
+            if self.MOBILE_CONNECTION.open:
+                self.send()
             else:
                 self._broadcast_self()
 
@@ -104,8 +106,14 @@ class MobileConnector(Connector):
     def _start_socket(self, host, port) -> None:
         me = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if ip != '127.0.0.1'][0]
         data = {'type': 'connection', 'address': me}
-        self._send(host, port, dumps(data).encode())
+        self.send(data, host, port)
 
-    def _send(self, host, port, message=b'{"type":"keep-alive"}') -> None:
+    @staticmethod
+    def send(message=None, host=None, port=None) -> None:
+        host = host if host else MobileConnector.MOBILE_CONNECTION.host
+        port = port if port else MobileConnector.MOBILE_CONNECTION.port
+        message = message if message else {"type": "keep-alive"}
+        message = dumps(message).encode()
+
         with closing(socket.socket(socket.AF_INET, socket.SOCK_DGRAM)) as sock:
             sock.sendto(message, (host, port))
