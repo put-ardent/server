@@ -116,6 +116,9 @@ class InternalRequestHandler(AbstractRequestHandler):
             queues = {'ranked': [], 'unranked': [], 'other': []}
             for queue in raw_queues:
                 if queue['gameMode'] == 'CLASSIC':
+                    if queue['gameTypeConfig']['name'] != 'GAME_CFG_TEAM_BUILDER_BLIND':
+                        continue
+
                     mode = 'ranked' if queue['isRanked'] else 'unranked'
                     queues[mode].append(queue)
                 elif queue['gameMode'].split('_')[0] != 'TUTORIAL':
