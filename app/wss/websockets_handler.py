@@ -20,11 +20,9 @@ class WebsocketHandler:
         while not self.LEAGUE_CONNECTION.open:
             sleep(.5)
 
-        asyncio.run(WebsocketHandler._run_websocket())
-        self.run()
+        asyncio.run(self._run_websocket())
 
-    @staticmethod
-    async def _run_websocket():
+    async def _run_websocket(self):
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ssl_context.load_verify_locations('./riotgames.pem')
 
@@ -33,10 +31,14 @@ class WebsocketHandler:
         auth = f'riot:{WebsocketHandler.LEAGUE_CONNECTION.password}'
         auth = 'Basic ' + base64.b64encode(auth.encode()).decode()
 
-        async with websockets.connect(url, extra_headers={'Authorization': auth}, ssl=ssl_context) as websocket:
+        async with websockets.connect(url, extra_headers={'Authorization': auth}, ssl=ssl_context, max_size=None) as websocket:
             await websocket.send('[5, "OnJsonApiEvent"]')
-            async for message in websocket:
-                WebsocketHandler._handle_message(message)
+            while True:
+                try:
+                    async for message in websocket:
+                        WebsocketHandler._handle_message(message)
+                except BaseException:
+                    continue
 
     @staticmethod
     def _handle_message(message):
@@ -76,7 +78,7 @@ class WebsocketHandler:
                     })
 
                 enemy_team = []
-                for summoner in data['enemyTeam']:
+                for summoner in data['theirTeam']:
                     enemy_team.append({
                         'cellId': summoner['cellId'],
                         'championId': summoner['championId'],
@@ -92,27 +94,31 @@ class WebsocketHandler:
             elif content['uri'] == '/lol-lobby-team-builder/champ-select/v1/pickable-champion-ids' and content['eventType'] == 'Create':
                 champions = []
                 champion_data = requests.request('get', 'https://ddragon.leagueoflegends.com/cdn/12.11.1/data/en_US/champion.json').json()['data']
-                for name_id, champion in champion_data:
+                for internal_id in champion_data:
+                    champion = champion_data[internal_id]
                     champions.append({
                         'id': champion['key'],
                         'name': champion['name'],
-                        'internalId': name_id,
-                        'pickable': int(champion.key) in data,
+                        'internalId': champion['id'],
+                        'pickable': int(champion['key']) in data,
                     })
 
                 MobileConnector.send({
                     'type': 'champions-grid',
                     'champions': champions
                 })
-            elif content['uri'].split('/')[:-1].join('/') == '/lol-champ-select/v1/grid-champions' and content['eventType'] == 'Update':
-                pickable = not (data['pickedByOtherOrBanned'] and not data['pickIntented']) and (data['owned'] or data['freeToPlay'])
+            elif '/'.join(content['uri'].split('/')[:-1]) == '/lol-champ-select/v1/grid-champions' and content['eventType'] == 'Update':
+                pickable = not (
+                        data['selectionStatus']['pickedByOtherOrBanned'] and
+                        not data['selectionStatus']['pickIntented']
+                ) and (data['owned'] or data['freeToPlay'])
                 MobileConnector.send({
                     'type': 'champion-selected',
                     'champion': {
                         'id': data['id'],
                         'name': data['name'],
                     },
-                    'picked': data['pickedByOtherOrBanned'],
-                    'intended': data['pickIntented'],
+                    'picked': data['selectionStatus']['pickedByOtherOrBanned'],
+                    'intended': data['selectionStatus']['pickIntented'],
                     'pickable': pickable
                 })
