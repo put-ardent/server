@@ -113,7 +113,7 @@ class InternalRequestHandler(AbstractRequestHandler):
                    and queue['category'] == 'PvP'
             ]
 
-            queues = {'ranked': [], 'unranked': [], 'other': []}
+            queues = {'unranked': [], 'other': []}
             for queue in raw_queues:
                 if queue['gameMode'] == 'CLASSIC':
                     if queue['gameTypeConfig']['name'] != 'GAME_CFG_TEAM_BUILDER_BLIND':
