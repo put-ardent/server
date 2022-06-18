@@ -38,17 +38,20 @@ class WebsocketHandler:
 
     @staticmethod
     def _handle_message(message):
-        if message[3]['uri'] == '/lol-matchmaking/v1/search':
-            MobileConnector.send({
-                'type': 'queue-timer',
-                'estimated-time': message[3]['data']['estimatedQueueTime'],
-                'current-time': message[3]['data']['timeInQueue'],
-            })
-        elif message[3]['uri'] == '/lol-matchmaking/v1/ready-check':
-            MobileConnector.send({
-                'type': 'accept-queue-timer',
-                'state': message[3]['data']['state'],
-                'timer': message[3]['data']['timer'],
-            })
+        if len(message) > 2:
+            content = message[3]
+            data = content['data']
+            if content['uri'] == '/lol-matchmaking/v1/search':
+                MobileConnector.send({
+                    'type': 'queue-timer',
+                    'estimated-time': data['estimatedQueueTime'],
+                    'current-time': data['timeInQueue'],
+                })
+            elif content['uri'] == '/lol-matchmaking/v1/ready-check':
+                MobileConnector.send({
+                    'type': 'accept-queue-timer',
+                    'state': data['state'],
+                    'timer': data['timer'],
+                })
         print(message)
         print()
