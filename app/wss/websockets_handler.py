@@ -7,6 +7,7 @@ import base64
 import asyncio
 from app.connector.connectors import MobileConnector
 import json
+import requests
 
 
 class WebsocketHandler:
@@ -59,4 +60,59 @@ class WebsocketHandler:
                     'playerResponse': data['playerResponse'],
                     'state': data['state'],
                     'timer': data['timer'],
+                })
+            elif content['uri'] == '/lol-lobby-team-builder/champ-select/v1/session' and content['eventType'] == 'Update':
+                cells_completion = {}
+                for cell_id, cell in enumerate(data['actions'][0]):
+                    cells_completion[cell_id] = cell['completed']
+
+                my_team = []
+                for summoner in data['myTeam']:
+                    my_team.append({
+                        'cellId': summoner['cellId'],
+                        'championId': summoner['championId'],
+                        'summonerId': summoner['summonerId'],
+                        'picked': cells_completion[summoner['cellId']],
+                    })
+
+                enemy_team = []
+                for summoner in data['enemyTeam']:
+                    enemy_team.append({
+                        'cellId': summoner['cellId'],
+                        'championId': summoner['championId'],
+                        'summonerId': summoner['summonerId'],
+                        'picked': cells_completion[summoner['cellId']],
+                    })
+
+                MobileConnector.send({
+                    'type': 'champ-select-state',
+                    'myTeam': my_team,
+                    'enemyTeam': enemy_team,
+                })
+            elif content['uri'] == '/lol-lobby-team-builder/champ-select/v1/pickable-champion-ids' and content['eventType'] == 'Create':
+                champions = []
+                champion_data = requests.request('get', 'https://ddragon.leagueoflegends.com/cdn/12.11.1/data/en_US/champion.json').json()['data']
+                for name_id, champion in champion_data:
+                    champions.append({
+                        'id': champion['key'],
+                        'name': champion['name'],
+                        'internalId': name_id,
+                        'pickable': int(champion.key) in data,
+                    })
+
+                MobileConnector.send({
+                    'type': 'champions-grid',
+                    'champions': champions
+                })
+            elif content['uri'].split('/')[:-1].join('/') == '/lol-champ-select/v1/grid-champions' and content['eventType'] == 'Update':
+                pickable = not (data['pickedByOtherOrBanned'] and not data['pickIntented']) and (data['owned'] or data['freeToPlay'])
+                MobileConnector.send({
+                    'type': 'champion-selected',
+                    'champion': {
+                        'id': data['id'],
+                        'name': data['name'],
+                    },
+                    'picked': data['pickedByOtherOrBanned'],
+                    'intended': data['pickIntented'],
+                    'pickable': pickable
                 })
