@@ -50,8 +50,8 @@ class WebsocketHandler:
             if content['uri'] == '/lol-matchmaking/v1/search':
                 MobileConnector.send({
                     'type': 'queue-timer',
-                    'estimated-time': data['estimatedQueueTime'],
-                    'current-time': data['timeInQueue'],
+                    'estimatedTime': data['estimatedQueueTime'],
+                    'currentTime': data['timeInQueue'],
                 })
             elif content['uri'] == '/lol-matchmaking/v1/ready-check' and content['eventType'] == 'Update':
                 MobileConnector.send({
