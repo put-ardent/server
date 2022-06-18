@@ -141,4 +141,18 @@ class InternalRequestHandler(AbstractRequestHandler):
 
             return InternalResponse(None, 204)
 
+        if self.command == 'POST' and self.path == '/queue/accept':
+            if not self.validate_league_connection():
+                return
+            self.league_request('post', '/lol-matchmaking/v1/ready-check/accept')
+
+            return InternalResponse(None, 204)
+
+        if self.command == 'POST' and self.path == '/queue/decline':
+            if not self.validate_league_connection():
+                return
+            self.league_request('post', '/lol-matchmaking/v1/ready-check/decline')
+
+            return InternalResponse(None, 204)
+
         return InternalResponse({'error': 'Method and route combination not found.'}, 404)
