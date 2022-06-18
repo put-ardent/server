@@ -36,8 +36,8 @@ class Monitor:
                 else (status_pending + ' ' + chalk.white('Waiting for mobile app.'))
             mobile_line = mobile_line.ljust(50)
 
-            # print(f"\033[F{ league_line }", end='\n')
-            # print(f"{ mobile_line }", end='\r')
+            print(f"\033[F{ league_line }", end='\n')
+            print(f"{ mobile_line }", end='\r')
 
             self._iterate_sequence_index()
             sleep(.15)

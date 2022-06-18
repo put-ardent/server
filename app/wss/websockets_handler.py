@@ -47,7 +47,6 @@ class WebsocketHandler:
 
         message = json.loads(message)
         if len(message) > 2 and type(message[2]) is dict:
-            print(message[2])
             content = message[2]
             data = content['data']
             if content['uri'] == '/lol-matchmaking/v1/search' and content['eventType'] == 'Update':
