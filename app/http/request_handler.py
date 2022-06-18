@@ -45,6 +45,13 @@ class AbstractRequestHandler(BaseHTTPRequestHandler):
             verify='./riotgames.pem'
         )
 
+    def validate_league_connection(self):
+        if not self.LEAGUE_CONNECTION.open:
+            self._respond(InternalResponse({'error': 'LCU connection is not yet open.'}, 502))
+            return False
+
+        return True
+
 
 class RequestHandler(AbstractRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -54,8 +61,7 @@ class RequestHandler(AbstractRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do(self) -> None:
-        if not self.LEAGUE_CONNECTION.open:
-            self._respond(InternalResponse({'error': 'LCU connection is not yet open.'}, 502))
+        if not self.validate_league_connection():
             return
 
         self._respond(self._pass_request())
@@ -80,9 +86,11 @@ class InternalRequestHandler(AbstractRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do(self) -> None:
-        self._respond(self._handle_request())
+        response = self._handle_request()
+        if response:
+            self._respond(response)
 
-    def _handle_request(self) -> InternalResponse:
+    def _handle_request(self) -> Optional[InternalResponse]:
         data = self._get_body()
 
         if self.command == 'POST' and self.path == '/connection':
@@ -93,6 +101,9 @@ class InternalRequestHandler(AbstractRequestHandler):
             return InternalResponse(None, 204)
 
         if self.command == 'GET' and self.path == '/queues':
+            if not self.validate_league_connection():
+                return
+
             queues_response = self.league_request('get', '/lol-game-queues/v1/queues')
             raw_queues = [
                 queue for queue in queues_response.json()
@@ -114,6 +125,8 @@ class InternalRequestHandler(AbstractRequestHandler):
 
         # if self.command == 'POST' and re.match('^\/queues/\d+/join$', self.path):
         if self.command == 'POST' and self.path == '/lobby':
+            if not self.validate_league_connection():
+                return
             self.league_request('post', '/lol-lobby/v2/lobby', {
                 'queueId': data['queueId']
             })
@@ -122,6 +135,8 @@ class InternalRequestHandler(AbstractRequestHandler):
             return InternalResponse(None, 204)
 
         if self.command == 'DELETE' and self.path == '/lobby':
+            if not self.validate_league_connection():
+                return
             self.league_request('delete', '/lol-lobby/v2/lobby/matchmaking/search')
 
             return InternalResponse(None, 204)
