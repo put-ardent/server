@@ -76,9 +76,12 @@ class MobileConnector(Connector):
         self._shutdown = False
 
     def run(self) -> None:
+        counter = 0
         while not self._shutdown:
             if self.MOBILE_CONNECTION.open:
-                self.send()
+                if not counter % 10:
+                    self.send()
+                counter += 1
             else:
                 self._broadcast_self()
 

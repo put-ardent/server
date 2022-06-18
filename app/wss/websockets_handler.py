@@ -6,6 +6,7 @@ from time import sleep
 import base64
 import asyncio
 from app.connector.connectors import MobileConnector
+import json
 
 
 class WebsocketHandler:
@@ -38,24 +39,20 @@ class WebsocketHandler:
 
     @staticmethod
     def _handle_message(message):
-        print(len(message) > 2)
-        if len(message) > 2:
-            print(message)
-        if len(message) > 2 and message[3] is dict:
-            print(message + '\n')
-            content = message[3]
+        if not message:
+            return
+
+        message = json.loads(message)
+        if len(message) > 2 and type(message[2]) is dict:
+            content = message[2]
             data = content['data']
             if content['uri'] == '/lol-matchmaking/v1/search':
-                print(message)
-                print()
                 MobileConnector.send({
                     'type': 'queue-timer',
                     'estimated-time': data['estimatedQueueTime'],
                     'current-time': data['timeInQueue'],
                 })
-            elif content['uri'] == '/lol-matchmaking/v1/ready-check':
-                print(message)
-                print()
+            elif content['uri'] == '/lol-matchmaking/v1/ready-check' and data['eventType'] == 'Update':
                 MobileConnector.send({
                     'type': 'accept-queue-timer',
                     'state': data['state'],
