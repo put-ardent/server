@@ -47,7 +47,7 @@ class WebsocketHandler:
             print(message[2])
             content = message[2]
             data = content['data']
-            if content['uri'] == '/lol-matchmaking/v1/search':
+            if content['uri'] == '/lol-matchmaking/v1/search' and content['eventType'] == 'Update':
                 MobileConnector.send({
                     'type': 'queue-timer',
                     'estimatedTime': data['estimatedQueueTime'],
