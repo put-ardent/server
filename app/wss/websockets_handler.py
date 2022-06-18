@@ -38,7 +38,7 @@ class WebsocketHandler:
 
     @staticmethod
     def _handle_message(message):
-        if len(message) > 2:
+        if len(message) > 2 and message[3] is dict:
             content = message[3]
             data = content['data']
             if content['uri'] == '/lol-matchmaking/v1/search':
